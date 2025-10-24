@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>just Now — Online Movie Ticket Booking</title>
+  <meta name="description" content="Demo Online Movie Ticket Booking with login, movie info, cast, seat selection, and UPI/NetBanking payment options."/>
+  <style>
+    :root{
+      --bg:#071226; --card:#0b1220; --muted:#9aa4b2; --accent:#ff4d6d; --glass: rgba(255,255,255,0.03);
+      --max-width:1100px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Roboto,Helvetica,Arial;background:linear-gradient(130deg)}
+    a{color:inherit}
+    .container{max-width:var(--max-width);margin:28px auto;padding:0 16px}
+    header{display:flex;justify-content:space-between;align-items:center;padding:18px;background:linear-gradient(90deg,#0000ff,transparent);border-bottom:1px solid #FFC0CB}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:48px;height:48px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#FFFFFF);font-weight:800}
+    h1{margin:0;font-size:18px}
+    .muted{color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:10px;align-items:center}
+
+    /* Search & Filter Bar */
+    .filter-bar{display:flex;gap:12px;align-items:center;padding:16px;background:;border-radius:12px;margin-bottom:18px;flex-wrap:wrap}
+    .filter-bar input, .filter-bar select{flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid}
+    .filter-bar input::placeholder{color:}
+
+    /* Login screen */
+    #loginPage{min-height:calc(100vh - 80px);display:flex;align-items:center;justify-content:center;padding:28px}
+    .card{background:linear-gradient(180deg,var(--card),#FFA500);padding:26px;border-radius:12px;max-width:420px;width:100%;box-shadow:0 10px 40px ;border:1px solid }
+    .card h2{margin:0 0 8px}
+    input,select,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid ;margin-top:8px}
+    .btn{background:var(--accent);border:0;padding:10px 14px;border-radius:10px;color:white;font-weight:700;cursor:pointer}
+    .link{background:transparent;border:0;color:var(--muted);cursor:pointer;text-decoration:underline}
+
+    /* Main app */
+    #app{display:none}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:22px;margin-top:18px}
+    .movies{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
+    .movie-card{background:linear-gradient(180deg,var(--card), );padding:12px;border-radius:12px;border:1px solid ;box-shadow:0 8px 24px }
+    .poster{height:300px;border-radius:8px;background-size:cover;background-position:center}
+    .meta{padding:10px 4px}
+    .title{font-weight:800}
+    .sub{font-size:13px;color;margin-top:6px}
+
+    /* Sidebar */
+    .sidebar{position:sticky;top:20px;padding:16px;background:linear-gradient(180deg,,transparent);border-radius:12px;border:1px solid }
+    .summary{display:flex;flex-direction:column;gap:10px}
+    .row{display:flex;justify-content:space-between;align-items:center}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(2,6,23,0.6),rgba(2,6,23,0.85));z-index:1200;padding:18px}
+    .modal.show{display:flex}
+    .modal-card{width:100%;max-width:980px;background:linear-gradient(180deg,#071526,#071226);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 20px 60px rgba(2,6,23,0.6);color:#eaf6ff;max-height:90vh;overflow-y:auto}
+    .movie-row{display:flex;gap:18px;flex-wrap:wrap}
+    .movie-info{flex:1;min-width:240px}
+
+    /* Cast */
+    .cast-container{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+    .cast-member{display:flex;flex-direction:column;align-items:center;width:88px;text-align:center}
+    .cast-member img{width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.03)}
+
+    /* Seat map */
+    .seat-map{margin-top:12px;padding:12px;background:var(--glass);border-radius:10px}
+    .screen{background:linear-gradient(90deg,#ffffff10,#ffffff04);padding:6px;border-radius:6px;text-align:center;color:var(--muted);font-size:13px;margin-bottom:12px}
+    .seats{display:grid;grid-template-columns:repeat(14,26px);gap:8px;justify-content:center}
+    .seat{width:26px;height:26px;border-radius:4px;background:#122332;border:2px solid rgba(255,255,255,0.03);cursor:pointer;display:inline-grid;place-items:center;font-size:10px;color:#cfe6ff}
+    .seat.booked{background:#333;opacity:0.5;cursor:not-allowed}
+    .seat.selected{background:linear-gradient(135deg,var(--accent),#ff7a9a);box-shadow:0 6px 18px rgba(255,77,109,0.12)}
+    .seat:hover:not(.booked){transform:translateY(-2px)}
+
+    /* Booking drawer */
+    .bookings-list{max-height:320px;overflow:auto}
+
+    footer{padding:18px;text-align:center;color:var(--muted);font-size:13px;margin-top:36px}
+
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr}
+      .seats{grid-template-columns:repeat(10,26px)}
+      .filter-bar{flex-direction:column}
+      .filter-bar input, .filter-bar select{width:100%;min-width:auto}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="logo">M</div>
+      <div>
+        <h1>just Now</h1>
+        <div class="muted">Movie Ticket Booking — cinemas</div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="muted">Welcome — Movie Ticket Booking System</div>
+      <button id="myBookingsBtn" class="btn" style="margin-left:10px">My Bookings</button>
+      <button id="logoutBtn" class="btn" style="margin-left:8px;display:none;background:#666">Logout</button>
+    </div>
+  </header>
+
+  <!-- LOGIN PAGE -->
+  <main id="loginPage" class="container">
+    <div class="card" style="margin:48px auto;max-width:520px">
+      <h2>Sign in to just Now</h2>
+      <div class="muted">Demo login — any email and password will work.</div>
+
+      <label style="margin-top:12px">Email</label>
+      <input id="loginEmail" type="email" placeholder="you@gmail.com" />
+
+      <label style="margin-top:8px">Password</label>
+      <input id="loginPass" type="password" placeholder="password" />
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="loginBtn" class="btn" style="flex:1">Login</button>
+        <button id="guestBtn" class="btn" style="flex:1;background:#6573ff">Continue as Guest</button>
+      </div>
+
+      <div style="margin-top:14px" class="muted">
+        This is a front-end demo. Bookings are local to your browser (localStorage). Payments are simulated.
+      </div>
+    </div>
+  </main>
+
+  <!-- APP PAGE -->
+  <main id="app" class="container" style="display:none">
+    <!-- Search & Filter Bar -->
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="🔍 Search movies by title, genre, or cast..." />
+      <select id="locationSelect">
+        <option value="">📍 Select Location</option>
+        <option value="Mumbai">Mumbai</option>
+        <option value="Delhi">Delhi</option>
+        <option value="Bangalore">Bangalore</option>
+        <option value="Hyderabad">Hyderabad</option>
+        <option value="Chennai">Chennai</option>
+        <option value="Kolkata">Kolkata</option>
+        <option value="Pune">Pune</option>
+        <option value="Ahmedabad">Ahmedabad</option>
+        <option value="Jaipur">Jaipur</option>
+        <option value="Lucknow">Lucknow</option>
+        <option value="warangal">warangal</option>
+        <option value="karimnagar">karimnagar</option>
+      </select>
+      <select id="theatreSelect" disabled>
+        <option value="">🎬 Select Theatre</option>
+      </select>
+    </div>
+
+    <div class="grid">
+      <!-- Movies -->
+      <section>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2 style="margin:0">Now Showing</h2>
+          <div class="muted">Choose movie → showtime → seats → pay</div>
+        </div>
+
+        <div class="movies" id="moviesList"></div>
+        <div id="noResults" style="display:none;text-align:center;padding:40px;color:">
+          No movies found matching your search.
+        </div>
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <strong>Your Selection</strong>
+          <button id="clearSelection" class="link">Clear</button>
+        </div>
+
+        <div class="summary">
+          <div class="row"><div class="muted">Location</div><div id="selLocation">—</div></div>
+          <div class="row"><div class="muted">Theatre</div><div id="selTheatre">—</div></div>
+          <div class="row"><div class="muted">Movie</div><div id="selMovie">—</div></div>
+          <div class="row"><div class="muted">Showtime</div><div id="selShow">—</div></div>
+          <div class="row"><div class="muted">Seats</div><div id="selSeats">0</div></div>
+          <div class="row"><div class="muted">Price</div><div id="selPrice">₹0</div></div>
+          <div><button id="openModalBtn" class="btn" style="width:100%;margin-top:6px" disabled>Choose Seats & Book</button></div>
+        </div>
+
+        <hr style="margin:12px 0;border-color:">
+
+        <strong>Bookings</strong>
+        <div class="bookings-list" id="bookingsList" style="margin-top:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button id="exportBookings" class="btn" style="flex:1">Export</button>
+          <button id="clearBookings" class="btn" style="flex:1;background:#666">Clear</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Movie Detail & Booking Modal -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong id="modalTitleText">Movie</strong>
+        <button id="closeModal" class="link">✕</button>
+      </div>
+
+      <div class="movie-row">
+        <div style="width:240px;flex-shrink:0">
+          <div id="modalPoster" class="poster" style="height:320px;border-radius:8px;background-size:cover"></div>
+        </div>
+
+        <div class="movie-info">
+          <div id="modalGenre" class="muted small"></div>
+          <p id="modalInfo" style="margin-top:8px"></p>
+
+          <div style="margin-top:10px">
+            <strong>Cast</strong>
+            <div id="modalCast" class="cast-container"></div>
+          </div>
+
+          <div style="display:flex;gap:12px;margin-top:14px;align-items:flex-end">
+            <div style="flex:1">
+              <label>Choose Showtime</label>
+              <select id="modalShowtime"></select>
+            </div>
+            <div style="width:160px">
+              <label>Ticket Type</label>
+              <select id="modalTicketType">
+                <option value="standard">Standard — ₹400</option>
+                <option value="premium">Premium — ₹570</option>
+                <option value="deluxe">Deluxe — ₹1000</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="seatWrapper" style="margin-top:12px">
+            <div class="seat-map">
+              <div class="screen">SCREEN</div>
+              <div id="seatGrid" class="seats" aria-hidden="false"></div>
+              <div id="seatNote" class="muted small" style="margin-top:8px">Click seats to select. Booked seats are disabled.</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:14px">
+            <button id="payBtn" class="btn">Confirm & Pay</button>
+            <button id="cancelBtn" class="link" style="align-self:center">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Modal (UPI / NetBanking only) -->
+  <div id="paymentModal" class="modal" aria-hidden="true">
+    <div class="modal-card" style="max-width:520px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong>Payment</strong>
+        <button id="closePayment" class="link">✕</button>
+      </div>
+
+      <div style="margin-top:8px">
+        <div class="muted small">Amount to pay: <strong id="payAmount">₹0</strong></div>
+
+        <label style="margin-top:12px">Select Method</label>
+        <select id="payMethod">
+          <option value="">-- Choose --</option>
+          <option value="upi">UPI</option>
+          <option value="netbanking">Net Banking</option>
+        </select>
+
+        <div id="upiForm" style="display:none;margin-top:12px">
+          <label>Enter UPI ID</label>
+          <input id="upiId" placeholder="example@bank" />
+        </div>
+
+        <div id="netForm" style="display:none;margin-top:12px">
+          <label>Select Bank</label>
+          <select id="bankSelect">
+            <option value="">-- Bank --</option>
+            <option>State Bank of India</option>
+            <option>HDFC Bank</option>
+            <option>ICICI Bank</option>
+            <option>Axis Bank</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:14px">
+          <button id="confirmPayBtn" class="btn" style="flex:1">Pay</button>
+          <button id="cancelPayBtn" class="btn" style="flex:1;background:#666">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="container">Built with ❤️ — Demo only. Bookings and payments are simulated and saved in your browser.</footer>
+
+  <script>
+    /***********************
+     * DATA — movies with cast & showtimes
+     ***********************/
+    const MOVIES = [
+      {
+        id: 1,
+        title: "They Call Him OG",
+        genre: "Action, Crime, Drama, Thriller",
+        runtime: "2h 34m",
+        date: "2025-09-25",
+        poster: "https://encrypted-tbn1.gstatic.com/images?q=tbn:ANd9GcQnn0MX5OlNxTQ95WHlIgKgU3NDCb9yLZt9qx-NLkw2_j1JQYDqXAHzY6aKxm6ONdk5eCEzuR4NWTgMDtn5Rngf90DW24LLXkB9AONGu0p4WA",
+        synopsis: "After vanishing from Mumbai`s underworld for a decade, mob boss Ojas Gambheera resurfaces-feared, unstoppable, and with a single goal: to reclaim his empire and exact vengeance on the current tyrant, Omi Bhau. As loyalties fracture and alliances shift, OG reignites a brutal criminal war, confronting both external threats and haunting buried betrayals.",
+        shows: ["2025-10-01T10:30","2025-10-01T13:30","2025-10-01T19:00"],
+        cast: [
+          { name: "Pawan kalyan", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/pawan-kalyan-26911-19-09-2017-02-46-38.jpg" },
+          { name: "Emraan Hashmi", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/emraan-hashmi-651-13-09-2016-06-29-11.jpg" },
+          { name: "Arjun Das", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdNIIXXRT4hXnPHRKXQgNBeJX688Y_8H_zFDE6vfXHWpOLnMGWqLO2cFg&s" },
+          { name: "Sriya Reddy", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sriya-reddy-2724-17-10-2018-12-56-21.jpg" },
+          { name: "Prakash Raj", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/prakash-raj-1713-1752826706.jpg" },
+          { name: "Priyanka Arul Mohan", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/priyanka-arul-mohan-1095858-30-10-2018-10-24-47.jpg" }
+        ]
+      },
+      {
+        id: 2,
+        title: "Mirai",
+        genre: "Action, Adventure, Fantasy, Thiller",
+        runtime: "2h 49m",
+        date: "2025-09-12",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_u9F9CgQI5-dY4LjH64fOzsXSdAuh8-wLdzIFYrkgcoR95bVTAyycY3E&s",
+        synopsis: "A street-smart young man discovers he is the only answer and the shield to stop a powerful force from reaching the nine sacred books of King Ashoka. Mirai is his journey of experiencing the power of Brahmand.",
+        shows: ["2025-10-01T11:00","2025-10-01T15:30","2025-10-01T20:30"],
+        cast: [
+          { name: "Teja Sajja", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/teja-sajja-1269445-1704888435.jpg" },
+          { name: "Ritika Nayak", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/ritika-nayak-2018677-1713431304.jpg" },
+          { name: "Manchu Manoj Kumar", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/manchu-manoj-kumar-10182-24-03-2017-17-46-28.jpg" },
+          { name: "Shriya Saran", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/shriya-saran-2156-18-09-2017-04-10-24.jpg" },
+          { name: "Jagapati Babu", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/jagapati-babu-5809-1720595411.jpg" },  
+          { name: "Jayaram Subramaniam", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/jayaram-subramaniam-2924-24-03-2017-18-02-25.jpg" }
+        ]
+      },
+      {
+        id: 3,
+        title: "Little Hearts",
+        genre: "Comedy, Romantic",
+        runtime: "2h 7m",
+        date: "2025-09-05",
+        poster: "https://images.filmibeat.com/webp/img/2025/09/littleheartsmain-1757326483.jpg",
+        synopsis: "Akhil`s failure in the EAMCET exam pushes him into the grind of long-term coaching, where academic pressure and personal heartbreak collide. Struggling to find meaning, he discovers the fine line between shallow attraction and true love. At the coaching centre, he meets Khatyayani, a girl who captures his heart instantly. But when she rejects him for a strange, unexpected reason, Akhil`s life takes a new turn. Refusing to let go, he embarks on a journey filled with humour, heart, and transformation, one that not only tests his resolve to win her over but also reshapes his understanding of love and life itself.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+          { name: "Mouli Tanuj", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTBDRnxFo2P2XyLf6mLd3dM7_O7EVFX63K_qjuq9RD_nDCX1xcv8Dp7b1I&s" },
+          { name: "Shivani Nagaram", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQWaTbmJGUTsajRsPn_0_PyW7jm16pk96d1FxjWK1hx799_j55hxg-5Ioc&s" },
+          { name: "S.S. Kanchi", img: "https://filmyfocus.com/wp-content/uploads/2023/09/Profile-Pic-2023-09-02T150642.489.png" },
+          { name: "Anitha Chowdary", img: "https://filmyfocus.com/wp-content/uploads/2023/11/Profile-Pic-1-8.png" },
+          { name: "Satya Krishnan", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/satya-krishnan-24089-24-03-2017-17-35-26.jpg" },
+          { name: "Nikil Abburi", img: "https://content.tupaki.com/en/feeds/2025/08/20/915500-nik.webp" },
+          { name: "Rajeev Kanakala", img: "https://assets.eenadu.net/article_img/0807Rajiv001.jpg" }
+        ]
+      },
+      {
+        id: 4,
+        title: "Kishkindhapuri",
+        genre: "Horror, Mystery, Thiller",
+        runtime: "2h 5m",
+        date: "2025-09-12",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/kishkindhapuri-et00457842-1757054623.jpg",
+        synopsis: "A ghost walking tour takes a chilling turn when a group of enthusiasts enters an abandoned radio station, unwittingly awakening a vengeful spirit that begins to hunt them down.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+          { name: "Bellamkonda Sai Srinivas", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/bellamkonda-sai-srinivas-1046754-1679904147.jpg" },
+          { name: "Anupama Parameswaran", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/anupama-parameswaran-1063607-1670497994.jpg" },
+          { name: "Tanikella Bharani", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/tanikella-bharani-2328-19-09-2017-02-40-27.jpg" },
+          { name: "Hyper Aadi", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/hyper-aadi-1085978-06-09-2017-01-32-06.jpg" },
+          { name: "Sudarshan", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sudarshan-28739-09-09-2020-05-41-26.jpg" },
+          { name: "Makarand Deshpande", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/makarand-deshpande-1063244-1679979162.jpg" },
+          { name: "Srikanth Iyyengar", img: "https://media.themoviedb.org/t/p/w600_and_h900_bestv2/aWerpaujBKMU8r4qsgnQp9RoTtd.jpg" }
+        ]
+      },
+      {
+        id: 5,
+        title: "Idli Kottu",
+        genre: "Action, Drama, Family",
+        runtime: "2h 27m",
+        date: "2025-10-01",
+        poster: "https://m.sakshipost.com/sites/default/files/styles/cinema_main/public/article_images/2025/10/1/idlykottu11758380301-1759303408.jpg?itok=8VrVncI8",
+        synopsis: "A wealthy hotel owner is threatened by the success of a talented young idli vendor. After tasting the vendor`s unique idlis, the owner discovers the vendor is his long-lost son and the child of a former lover. As the owner decides to transfer his fortune to his newfound heir, themes of wealth, family, and identity collide, sparking a fierce conflict with his other son.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+          { name: "Dhanush", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/dhanush-3988-18-09-2017-03-32-21.jpg" },
+          { name: "Nithya Menen", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/nithya-menen-1052316-24-03-2017-13-47-46.jpg" },
+          { name: "Arun Vijay", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/arun-vijay-3403-1735810993.jpg" },
+          { name: "Shalini Pandey", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/shalini-pandey-1086417-27-09-2017-02-39-28.jpg" },
+          { name: "Sathyaraj", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sathyaraj-3835-23-08-2018-11-06-38.jpg" },
+          { name: "Rajkiran", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/rajkiran-7177-24-03-2017-15-48-35.jpg" }
+        ]
+      },
+      {
+        id: 6,
+        title: "Kantara: A Legend Chapter-1",
+        genre: "Adventure, Drama, Thriller",
+        runtime: "2h 48m",
+        date: "2025-10-02",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/kantara-a-legend-chapter-1-et00377351-1759316771.jpg",
+        synopsis: "In pre-colonial Karnataka, during the Kadamba dynasty era, the ritual of Bhuta Kola takes root in the culture. Meanwhile, the seeds for the rise of Kaadubettu Shiva are also sown.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+          { name: "Rishab Shetty", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/rishab-shetty-1064313-1724645842.jpg" },
+          { name: "Rukmini Vasanth", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/rukmini-vasanth-1092753-15-05-2018-10-49-55.jpg" },
+          { name: "Gulshan Devaiah", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/gulshan-devaiah-13831-20-12-2017-02-46-39.jpg" },
+          { name: "Jayaram Subramaniam", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/jayaram-subramaniam-2924-24-03-2017-18-02-25.jpg" }
+        ]
+      },
+      {
+        id: 7,
+        title: "Madharaasi",
+        genre: "Action, Thriller",
+        runtime: "2h 36m",
+        date: "2025-09-05",
+        poster: "https://www.5movierulz.toys/uploads/Madharaasi-Telugu.jpg",
+        synopsis: "Virat, along with his friend Chirag, joins hands with a syndicate to bring gun culture to Tamil Nadu. The NIA, headed by Premnath, tries to stop them but falters in his attempt. During this time, he unexpectedly meets Raghu Ram, a man on the verge of suicide, and uses him in his mission.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Sivakarthikeyan", img: "https://www.wallsnapy.com/img_gallery/siva-karthikeyan-images-hd-download-6601988.jpg" },
+           { name: "Shabeer Kallarakkal", img: "https://www.behindwoods.com/tamil-actor/shabeer-kallarakkal/shabeer-kallarakkal-stills-photos-pictures-05.jpg" },
+           { name: "VIDYUT JAMMWAL", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSSPUKS2qqe0YAhWSL595k9xDmc5iktmXg_vSrWpZm3Sfmo13XtU3YFVO8&s" },
+           { name: "Rukmini Vasanth", img: "https://images.filmibeat.com/webp/img/popcorn/profile_photos/rukmini-vasanth-20230831175710-41438.jpg" },
+           { name: "Nanditha Sreekumar", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2eJoI3Y055k3kyaIeLfTjiNx1Sjv4BXsqtxtGseRxDGkK-3l_xkIwi69TfMS3T4gExkQ&usqp=CAU" },
+           { name: "Aadukalam Naren", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/aadukalam-naren-37428-1746180004.jpg" }
+      ]
+     },
+     {
+        id: 8,
+        title: "Checkmate",
+        genre: "Drama, Thriller",
+        runtime: "2h 5m",
+        date: "2025-08-09",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/checkmate-et00406061-1723029183.jpg",
+        synopsis: "Philip Kurian, the charismatic CEO of the pharma company AnnPhil Corp, finds himself embroiled in a corporate case for deaths related to drug trials by his company. Determined to escape the charges, he resorts to unusual methods.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Anoop Menon", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/anoop-menon-8914-29-12-2021-03-14-57.jpg" },
+           { name: "Lal Paul Michael", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/lal-1252-24-03-2017-12-54-14.jpg" },
+           { name: "Rekha Harindran", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSK0E2PhFseGUAfUAnLPXxGX2CSETe5GuE0hD58F7W41oS2Ofiai_Q3vm9SykBGa3dLSV4&usqp=CAU" },
+           { name: "Rajalekshmy C", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQX9lxqfEx-seIrE9o9uKRj73p5zG5xB6ERrw&s" },
+           { name: "Viswam Nair", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQThTt1Zz2h6XwyZhZS6SgMhNdEOz74dev-Gfn-7PfXzUQxe5ZAlKLUKO6ZgVlw2YWh2W4&usqp=CAU" }
+      ]
+     },
+     {
+        id: 9,
+        title: "Jolly LLB 3",
+        genre: "Drama, Comdey",
+        runtime: "2h 37m",
+        date: "2025-09-19",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/jolly-llb-3-et00450799-1756894236.jpg",
+        synopsis: "In this uproarious courtroom comedy, the smart-alec Jolly Mishra and the Jugadu Jolly Tyagi find themselves back in Judge Tripathi's court ensuing a rollercoaster ride of razor-sharp banter, outrageous legal maneuvers, and heartfelt moments as these lawyers try to outsmart, outplay, and outtalk each other. Packed with laugh-out-loud chaos, dramatic twists, and unexpected bursts of compassion, it's the ultimate legal showdown.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Akshay Kumar", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/akshay-kumar-94-1681713982.jpg" },
+           { name: "Arshad Warsi", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/arshad-warsi-228-14-09-2017-01-59-07.jpg" },
+           { name: "Saurabh Shukla", img: "http://in.bmscdn.com/iedb/artist/images/website/poster/large/saurabh-shukla-2063-24-03-2017-12-31-30.jpg" },
+           { name: "Amrita Rao", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/amrita-rao-146-18-01-2019-12-43-22.jpg" },
+           { name: "Huma Qureshi", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/huma-qureshi-30360-24-03-2017-13-58-06.jpg" }
+      ]
+     },
+     {
+        id: 10,
+        title: "Baaghi 4",
+        genre: "Action, Thiller",
+        runtime: "2h 37m",
+        date: "2025-09-05",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/baaghi-4-et00420244-1756971087.jpg",
+        synopsis: "A darker spirit, a bloodier mission. This time he is not the same!",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Tiger Shroff", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/tiger_shroff_37437_27-07-2016_11-49-08.jpg" },
+           { name: "Sanjay Dutt", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sanjay-dutt-2035-12-09-2017-05-07-10.jpg" },
+           { name: "Saurabh Shukla", img: "http://in.bmscdn.com/iedb/artist/images/website/poster/large/saurabh-shukla-2063-24-03-2017-12-31-30.jpg" },
+           { name: "Harnaaz Kaur Sandhu", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/harnaaz-kaur-sandhu-2020992-1659341525.jpg" },
+           { name: "Sonam Bajwa", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sonam-bajwa-40182-13-06-2019-02-40-40.jpg" }
+      ]
+     },
+     {
+        id: 11,
+        title: "Sunny Sanskari Ki Tulsi Kumari",
+        genre: "Romantic, Comdey",
+        runtime: "2h 16m",
+        date: "2025-10-02",
+        poster: "http://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/sunny-sanskari-ki-tulsi-kumari-et00388406-1759906451.jpg",
+        synopsis: "Set against the backdrop of Delhi, the film is based on a humorously convoluted premise of two ex lovers trying to win their love back. Amidst an extravagantly dramatic tale of innocent deception and comical misunderstandings - an accidental love story blossoms. Who would get their happy ending in the middle of the hilarious chaos?",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Varun Dhawan", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/varun-dhawan-21064-12-09-2017-02-22-38.jpg" },
+           { name: "Janhvi Kapoor", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/janhvi-kapoor-1087603-1758700808.jpg" },
+           { name: "Rohit Saraf", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/rohit-saraf-2002253-1717241599.jpg" }
+      ]
+     },
+     {
+        id: 12,
+        title: "Dashavatar",
+        genre: "Drama, Adventure, Thiller",
+        runtime: "2h 35m",
+        date: "2025-09-12",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/dashavatar-et00455185-1753336677.jpg",
+        synopsis: "Mahavatar Narasimha story tells the story of Lord Vishnu’s Narasimha Avatar. This is fourth in the Dashavatars of Lord Vishnu. In Satya Yuga, Maharshi Kashyap’s wife Diti’s insistence on intercourse results in the sensational developments resulting in the birth of two demons Hiranyaksha and Hiranyakashipu. Where this leads to and how their birth impacts the entire universe and what forced Lord Vishnu to incarnate into Lord Varaha and Lord Narasimha, what role Hiranyakashipu’s son Prahlada played from the rest of the narration.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Dilip Prabhavalkar", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/dilip-prabhavalkar-594-24-03-2017-13-54-41.jpg" },
+           { name: "Mahesh Manjrekar", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/mahesh-manjrekar-1327-1743860900.jpg" },
+           { name: "Siddharth Menon", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/siddharth-menon-11571-1753179464.jpg" },
+           { name: "Bharat Jadhav", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/bharat-jadhav-309-1679386116.jpg" },
+           { name: "Abhinay Berde", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/abhinay-berde-1076998-1712982538.jpg" },
+           { name: "Ravi Kale", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/ravi-kale-1845-14-09-2016-12-30-50.jpg" },
+           { name: "Sunil Tawde", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sunil-tawde-1045391-31-03-2017-12-58-07.jpg" }
+         ]
+      },
+     {
+        id: 13,
+        title: "Constable",
+        genre: "Crime, Thiller",
+        runtime: "2h 10m",
+        date: "2025-08-14",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQV-AMGizt01Xc-cY_TA-WZu1KTbusPELGoYp_fOq2-Dc5Mwou5HrYwfhg&s",
+        synopsis: "Constable Kashi lives a quiet life, treating his sister-in-law like family and settling into his new posting in Mokila. He forms a strong bond with fellow constable Bhadram, unaware of the horrors awaiting them. When a series of brutal murders rocks the village, Kashi must rise to the challenge. With his sharp instincts and secret admirer Mahati by his side, he dives into a chilling investigation that pushes him to his limits.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Varun Sandesh", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/varun-sandesh-8026-1757068005.jpg" },
+           { name: "Ravi Varma", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/ravi-varma-16479-21-11-2017-10-08-44.jpg" },
+           { name: "Duvvasi Mohan", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/duvvasi-mohan-2855-24-03-2017-14-59-12.jpg" },
+           { name: "Madhulika Varanasi", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRtFBWHidAKQAGXsJV28uD29k1kvu895xe8og&s" },
+           { name: "Kalpalatha", img: "https://www.imdb.com/name/nm8971057/mediaviewer/rm2268051969/?ref_=nm_ov_ph" },
+           { name: "Surya Kumar Bhagvandas", img: "https://filmyfocus.com/wp-content/uploads/2023/08/surya1.png" }
+
+         ]
+      },
+      {
+        id: 14,
+        title: "Tron: Ares",
+        genre: "Drama, Adventure, Sci-Fi",
+        runtime: "1h 51m",
+        date: "2025-10-10",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/tron-ares-et00440957-1757057063.jpg",
+        synopsis: "Two tech giants are racing to integrate AI and technology into the real world. While Eve Kim wants to use it to help mankind, Julian Dillinger intends to create weapons. As their digital creations can only last for 29 minutes in the real world, they hunt for the solution, the Permanence Code. Dillinger sends an advanced program, Ares (Jared Leto), into the real world to retrieve the code, but the super-intelligent and self-aware Ares questions its programming.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Jared Leto", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/jared-leto-3943-24-03-2017-17-30-08.jpg" },
+           { name: "Greta Lee", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/greta-lee-1063316-24-03-2017-16-22-53.jpg" },
+           { name: "Evan Peters", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/evan-peters-1050913-04-11-2020-03-54-08.jpg" },
+           { name: "Jodie Turner-Smith", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/jodie-turner-smith-2013050-27-04-2021-05-09-57.jpg" },
+           { name: "Jeff Bridges", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/jeff-bridges-962-24-03-2017-12-37-32.jpg" },
+           { name: "Gillian Anderson", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/gillian-anderson-747-07-08-2017-00-24-21.jpg" }
+         ]
+      },
+      {
+        id: 15,
+        title: "Dude",
+        genre: "Action, Comedy, Romantic",
+        runtime: "2h 19m",
+        date: "2025-10-17",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/dude-et00445596-1759640703.jpg",
+        synopsis: "Agan and Kural have been a part of each other's lives for as long as they can remember, sharing countless moments that have shaped who they are. As they step into a new phase of life, unforeseen challenges test their understanding of themselves and the world around them, leading them on a journey of growth, choices, and change.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Pradeep Ranganathan", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTOqAOiFLmnYG4nequ84nAgFyDlDFabx_08IIZOe-xXRExU_jqp1mp0SHJ1bbGmnxNFZp6NrA" },
+           { name: "Sarath Kumar", img: "https://upload.wikimedia.org/wikipedia/commons/e/ee/R_Sarathkumar_at_Tamil_Film_Industry_Hunger_Strike_%28cropped%29.jpg" },
+           { name: "Mamitha Baiju", img: "https://filmyfocus.com/wp-content/uploads/2024/02/Copy-of-Profile-7-1.png" },
+           { name: "Hridhu Haroon", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFhnVoF1sXMV3WvUkbRkR4ETnQjJNMmLJJWQqLSXaaahWOlL0&s" },
+           { name: "Rohini Molleti", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Rohini_%28actress%29.jpg/375px-Rohini_%28actress%29.jpg" }
+         ]
+      },
+      {
+        id: 16,
+        title: "K-Ramp",
+        genre: "Action, Romantic",
+        runtime: "2h 20m",
+        date: "2025-10-18",
+        poster: "https://media.cinemaexpress.com/cinemaexpress%2F2025-06-30%2Fgwp4m3ta%2FK-Ramp-still.jpg?w=480&auto=format%2Ccompress",
+        synopsis: "K-Ramp is a Telugu movie directed by Jains Nani. The movie features Kiran Abbavaram and Yukti Thareja in the lead roles.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Kiran Abbavaram", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/kiran-abbavaram-1267796-1662543648.jpg" },
+           { name: "Yukti Thareja", img: "https://filmyfocus.com/wp-content/uploads/2023/08/Copy-of-Profile-2023-08-13T183819.392.png" },
+           { name: "Saikumar Pudipeddi", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/saikumar-pudipeddi-1979-24-03-2017-15-43-47.jpg" },
+           { name: "Ali Basha", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/ali-basha-1053378-11-10-2019-05-49-24.jpg" },
+           { name: "Kamna Jethmalani", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/kamna-jethmalani-1140-24-03-2017-13-01-45.jpg" },
+           { name: "Vennela Kishore", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/vennela-kishore-16481-1659598641.jpg" },
+           { name: "Vijaya Krishna Naresh", img: "https://cdn.telugu360.com/wp-content/uploads/2015/10/Senior-Naresh.jpg" }
+         ]
+      },
+      {
+        id: 17,
+        title: "Telusu Kadha",
+        genre: "Drama, Romantic",
+        runtime: "2h 16m",
+        date: "2025-10-17",
+        poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSrI1QZ4lZumk3bwggse6NjvG4JDQbDB-wp-g&s",
+        synopsis: "Two tech giants are racing to integrate AI and technology into the real world. While Eve Kim wants to use it to help mankind, Julian Dillinger intends to create weapons. As their digital creations can only last for 29 minutes in the real world, they hunt for the solution, the Permanence Code. Dillinger sends an advanced program, Ares (Jared Leto), into the real world to retrieve the code, but the super-intelligent and self-aware Ares questions its programming.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Siddhu Jonnalagadda", img: "https://images.filmibeat.com/webp/192x258/img/popcorn/profile_photos/siddhujonnalagadda-20240418070934-24302.jpg" },
+           { name: "Raashi Khanna", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/raashi-khanna-35421-1656056374.jpg" },
+           { name: "Srinidhi Shetty", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sreenidhi-22732-19-02-2018-09-47-37.jpg" }
+         ]
+      },
+      {
+        id: 18,
+        title: "Thamma",
+        genre: "Horror, Comedy, Romantic",
+        runtime: "2h 30m",
+        date: "2025-10-21",
+        poster: "https://media.assettype.com/freepressjournal/2025-10-20/l5rd6y9q/Thamma-first-review.jpg",
+        synopsis: "Dinesh Vijan`s Maddock Horror comedy universe needed a love story. Unfortunately, it`s a bloody one.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Ayushmann Khurrana", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/ayushmann-khurrana-29002-05-09-2019-06-04-30.jpg" },
+           { name: "Rashmika Mandanna", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/rashmika-mandanna-1076783-28-12-2016-12-20-39.jpg" },
+           { name: "Paresh Rawal", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/paresh-rawal-1644-13-09-2017-03-44-45.jpg" },
+           { name: "Nawazuddin Siddiqui", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/nawazuddin_siddiqui_17110_26-07-2016_05-42-25.jpg" },
+           { name: "Faisal Malik", img: "https://www.hindustantimes.com/ht-img/img/2024/02/25/550x309/Faisal20240114_141936_1708840959214_1708840983566.jpg" }
+         ]
+      },
+      {
+        id: 19,
+        title: "Ek Deewane Ki Deewaniyat",
+        genre: "Drama, Thiller, Romantic",
+        runtime: "2h 20m",
+        date: "2025-10-21",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/ek-deewane-ki-deewaniyat-et00447585-1756106577.jpg",
+        synopsis: "A powerful politician's unrequited love for a superstar actress escalates into a dangerous and destructive obsession. The story, directed by Milap Milan Zaveri and starring Harshvardhan Rane and Sonam Bajwa, explores the themes of love, passion, and betrayal. The film's formulaic plot and melodramatic nature have drawn mixed reviews, but it has been noted for its performances and music.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Harshvardhan Rane", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/harshvardhan-rane-31964-24-03-2017-17-46-18.jpg" },
+           { name: "Sonam Bajwa", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sonam-bajwa-40182-13-06-2019-02-40-40.jpg" }
+         ]
+      },
+      {
+        id: 20,
+        title: "Tunnel ",
+        genre: "Action, Suspense, Thriller",
+        runtime: "2h 8m",
+        date: "2025-09-19",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/tunnel-et00461564-1757313193.jpg",
+        synopsis: "Fuelled by a lifetime of suffering, an ex army man embarks on a vengeful quest. Standing in his way is a police constable whose own past pain transformed into a dutiful son. When their paths converge, hero either can flee for his life or take a stand against the villain`s scheme of things.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Atharvaa Murali", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/atharvaa-murali-28524-06-12-2017-01-13-48.jpg" },
+           { name: "Ashwin Kakumanu", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/ashwin-kakumanu-40068-1757066649.jpg" },
+           { name: "Lavanya Tripathi", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/lavanya-tripathi-30846-1757066711.jpg" },
+           { name: "Lakshmi Priya", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/lakshmi-priya-1070733-1754452147.jpg" }
+         ]
+      },
+      {
+        id: 21,
+        title: "Mirage",
+        genre: "Mystery, Thiller",
+        runtime: "2h 32m",
+        date: "2025-09-19",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/mirage-et00462575-1757916948.jpg",
+        synopsis: "In a relentless quest for the truth, Abhirami searches for her fiance, Kiran, who has mysteriously disappeared. She teams up with investigative journalist Aswin, but their pursuit of answers uncovers a complex web of secrets and questions, drawing them deeper into a mystery far greater than they ever imagined.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Asif Ali", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/asif-ali-13839-1658319936.jpg" },
+           { name: "Aparna Balamurali", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/aparna-balamurali-1064392-1671107921.jpg" },
+           { name: "Hakkim Shah", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/hakkim-shah-2016385-1669624630.jpg" },
+           { name: "Hannah Reji", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/hannah-reji-1079690-1667217271.jpg" },
+           { name: "Sampath Raj", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sampath-raj-15429-24-03-2017-17-54-51.jpg" }
+         ]
+      },
+      {
+        id: 22,
+        title: "Mithra Mandali",
+        genre: "Comedy",
+        runtime: "2h 18m",
+        date: "2025-10-16",
+        poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/mithra-mandali-et00451889-1751443532.jpg",
+        synopsis: "A gang of good-for-nothing friends get caught in a hilarious mess between a fiery politician and his rebellious daughter, thanks to love and sheer stupidity.",
+        shows: ["2025-10-01T09:30","2025-10-01T16:00","2025-10-01T21:30"],
+        cast: [
+           { name: "Priyadarshi Pulikonda", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/priyadarshi-pulikonda-1072555-24-03-2017-13-16-40.jpg" },
+           { name: "Niharika NM", img: "https://imageio.forbes.com/specials-images/imageserve/62801bcb1aa68688e461069e/0x0.jpg?format=jpg&crop=1791,1792,x24,y10,safe&height=416&width=416&fit=bounds" },
+           { name: "Vishnu Oi", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/vishnu-oi-2014737-13-10-2021-02-06-56.jpg" },
+           { name: "Vennela Kishore", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/vennela-kishore-16481-1659598641.jpg" },
+           { name: "Sathya", img: "https://in.bmscdn.com/iedb/artist/images/website/poster/large/sathya-9723-1725244049.jpg" }
+         ]
+      },
+
+
+
+
+      
+
+
+
+    ];
+
+    // Theatres data by location
+    const THEATRES = {
+      "Mumbai": ["PVR Icon Phoenix palladium Lower Parel Mumbai", "INOX Megaplex", "Cinepolis ", "INOX:Megaplex, Inorbit Mall Malad", "INOX R-City Ghatkopar"],
+      "Delhi": ["PVR Select Citywalk", "INOX coca cola paras nehru place", "inox vishal mall rajouri garden", "pvr superplex logix noida","pvr Superplex Vegas Mall", "pvr imax with laser priya delhi"],
+      "Bangalore": ["PVR nexus (formerly forum) koramangala", "INOX Garuda Mall", "Cinepolis Royal Meenakshi", "pvr vr bengaluru whitefield", "inox megaplex mall of asia bangalore"],
+      "Hyderabad": ["pvr central mall panjagutta hyderabad", "Asian GPR", "AMB Cinemas", "Prasads IMAX","asian rajyalaxmi uppal", "AAA cinemas ameerpet", "sudarshan theatre 35MM", "sandhya 70mm", "sandhya 35mm"],
+      "Chennai": ["PVR Palazzo-the nexus vijaya mall", "PVR:Sathyam Royapettah", "AGS CinemasT Nagar", "AGS Cinemas villivakkam", "Mayajaal Multiplex","inox luxe phoenix market city velachery"],
+      "Kolkata": ["PVR South City", "INOX Forum Mall", "Cinepolis Lake Mall", "Priya Cinema","inox south city","svf cinemas"],
+      "Pune": ["PVR Pavilion", "INOX Bund Garden", "Cinepolis Seasons Mall", "City Pride", "abhiruchi city pride" , "vishal cinemas"],
+      "Ahmedabad": ["PVR Acropolis", "INOX Reliance Mega Mall", "Cinepolis Alpha One", "Rajhans Cinemas" , "mango plus cinemas" , "mukta a2 cinemas", "NY cinemas swagat mall"],
+      "Jaipur": ["Raj Mandir Cinema", "PVR Crystal Palm", "INOX GT Central", "Gold Cinema", "dd cinemas vivacity mall jaipur", "funstar jaipur", "paras cinema amer road"],
+      "Lucknow": ["PVR Phoenix United", "Wave Cinemas", "INOX Riverside Mall", "Fun Cinemas", "moviemax shalimar gateway", "vin palace multiplex dolby atmos vikas nagar", "antas dd cinema"],
+      "warangal": ["PVR: warangal maddox mall", "asian sridevi mall ", "asian gemini", "asian ashoka air conditioned hanumakonda", "venkatrama theatre warangal", "sambhavi theatre", "amrutha theatres", "ram 70mm 4k barco and laxman 35mm 2k warangal"],
+      "karimnagar": ["asian mukta a2 srinivasa", "asian paradise cinemas", "mamatha cinemas 4k dolby atmos", "prathima multiplex", "bharat talkies", "venkateshwara theatre"]
+    };
+
+    // pricing by ticket type
+    const PRICING = { standard:400, premium:570, deluxe:1000 };
+
+    // runtime app state
+    let state = {
+      user: null,
+      location: null,
+      theatre: null,
+      selectedMovie: null,
+      selectedShow: null,
+      ticketType: 'standard',
+      selectedSeats: [],
+      bookings: [],
+      filteredMovies: MOVIES
+    };
+
+    /***********************
+     * ELEMENT REFERENCES
+     ***********************/
+    const loginPage = document.getElementById('loginPage');
+    const appPage = document.getElementById('app');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const myBookingsBtn = document.getElementById('myBookingsBtn');
+    const moviesListEl = document.getElementById('moviesList');
+    const noResultsEl = document.getElementById('noResults');
+    const searchInput = document.getElementById('searchInput');
+    const locationSelect = document.getElementById('locationSelect');
+    const theatreSelect = document.getElementById('theatreSelect');
+    const selLocationEl = document.getElementById('selLocation');
+    const selTheatreEl = document.getElementById('selTheatre');
+    const selMovieEl = document.getElementById('selMovie');
+    const selShowEl = document.getElementById('selShow');
+    const selSeatsEl = document.getElementById('selSeats');
+    const selPriceEl = document.getElementById('selPrice');
+    const openModalBtn = document.getElementById('openModalBtn');
+    const clearSelectionBtn = document.getElementById('clearSelection');
+    const bookingsListEl = document.getElementById('bookingsList');
+    const exportBookingsBtn = document.getElementById('exportBookings');
+    const clearBookingsBtn = document.getElementById('clearBookings');
+
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitleText');
+    const modalPoster = document.getElementById('modalPoster');
+    const modalGenre = document.getElementById('modalGenre');
+    const modalInfo = document.getElementById('modalInfo');
+    const modalCast = document.getElementById('modalCast');
+    const modalShowtime = document.getElementById('modalShowtime');
+    const modalTicketType = document.getElementById('modalTicketType');
+    const seatGrid = document.getElementById('seatGrid');
+    const payBtn = document.getElementById('payBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const closeModalBtn = document.getElementById('closeModal');
+
+    const paymentModal = document.getElementById('paymentModal');
+    const payAmountEl = document.getElementById('payAmount');
+    const payMethodEl = document.getElementById('payMethod');
+    const upiForm = document.getElementById('upiForm');
+    const netForm = document.getElementById('netForm');
+    const upiIdEl = document.getElementById('upiId');
+    const bankSelectEl = document.getElementById('bankSelect');
+    const confirmPayBtn = document.getElementById('confirmPayBtn');
+    const cancelPayBtn = document.getElementById('cancelPayBtn');
+    const closePaymentBtn = document.getElementById('closePayment');
+
+    /***********************
+     * UTILITIES
+     ***********************/
+    function saveBookings(){ localStorage.setItem('justNow_bookings', JSON.stringify(state.bookings)); }
+    function loadBookings(){ const raw = localStorage.getItem('justNow_bookings'); state.bookings = raw ? JSON.parse(raw) : []; }
+    function formatDateTime(s){ const d = new Date(s); return d.toLocaleString(); }
+    function getShowKey(movieId, showISO, theatre){ return `m${movieId}__${showISO}__${theatre}`; }
+
+    /***********************
+     * SEARCH & FILTER
+     ***********************/
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      if(!query){
+        state.filteredMovies = MOVIES;
+      } else {
+        state.filteredMovies = MOVIES.filter(m => {
+          return m.title.toLowerCase().includes(query) ||
+                 m.genre.toLowerCase().includes(query) ||
+                 m.cast.some(c => c.name.toLowerCase().includes(query));
+        });
+      }
+      renderMovies();
+    });
+
+    locationSelect.addEventListener('change', (e) => {
+      const location = e.target.value;
+      state.location = location;
+      if(location && THEATRES[location]){
+        theatreSelect.disabled = false;
+        theatreSelect.innerHTML = '<option value="">🎬 Select Theatre</option>';
+        THEATRES[location].forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t;
+          opt.textContent = t;
+          theatreSelect.appendChild(opt);
+        });
+        state.theatre = null;
+        theatreSelect.value = '';
+      } else {
+        theatreSelect.disabled = true;
+        theatreSelect.innerHTML = '<option value="">🎬 Select Theatre</option>';
+        state.theatre = null;
+      }
+      updateSidebar();
+    });
+
+    theatreSelect.addEventListener('change', (e) => {
+      state.theatre = e.target.value;
+      updateSidebar();
+    });
+
+    /***********************
+     * AUTH (demo)
+     ***********************/
+    const loginBtn = document.getElementById('loginBtn');
+    const guestBtn = document.getElementById('guestBtn');
+    loginBtn.addEventListener('click', ()=> {
+      const email = document.getElementById('loginEmail').value.trim();
+      const pass = document.getElementById('loginPass').value.trim();
+      if(!email || !pass){ alert('Please enter email & password'); return; }
+      state.user = { email };
+      localStorage.setItem('justNow_user', JSON.stringify(state.user));
+      enterApp();
+    });
+    guestBtn.addEventListener('click', ()=> {
+      state.user = { email: 'guest@justnow' };
+      localStorage.setItem('justNow_user', JSON.stringify(state.user));
+      enterApp();
+    });
+    logoutBtn.addEventListener('click', ()=> {
+      localStorage.removeItem('justNow_user');
+      state.user = null;
+      appPage.style.display = 'none';
+      loginPage.style.display = 'block';
+      logoutBtn.style.display = 'none';
+    });
+
+    function enterApp(){
+      loginPage.style.display = 'none';
+      appPage.style.display = 'block';
+      logoutBtn.style.display = 'inline-block';
+      loadBookings();
+      renderMovies();
+      renderBookingsList();
+      resetSelection();
+    }
+
+    // auto-login if user stored
+    (function checkUser(){ 
+      const u = localStorage.getItem('justNow_user'); 
+      if(u){ 
+        state.user = JSON.parse(u); 
+        enterApp(); 
+      } 
+    })();
+
+    /***********************
+     * RENDER MOVIES
+     ***********************/
+    function renderMovies(){
+      moviesListEl.innerHTML = '';
+      if(state.filteredMovies.length === 0){
+        noResultsEl.style.display = 'block';
+        return;
+      }
+      noResultsEl.style.display = 'none';
+      
+      state.filteredMovies.forEach(m => {
+        const el = document.createElement('div');
+        el.className = 'movie-card';
+        el.innerHTML = `
+          <div class="poster" style="background-image:url('${m.poster}')"></div>
+          <div class="meta">
+            <div class="title">${m.title}</div>
+            <div class="sub">${m.genre} • ${m.runtime} • ${new Date(m.date).toLocaleDateString()}</div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" data-id="${m.id}" data-action="book">Book Now</button>
+              <button class="btn" data-id="${m.id}" data-action="details" style="background:#6573ff">Details</button>
+            </div>
+          </div>
+        `;
+        moviesListEl.appendChild(el);
+      });
+
+      moviesListEl.querySelectorAll('button[data-action]').forEach(b => {
+        const id = +b.dataset.id;
+        const action = b.dataset.action;
+        b.addEventListener('click', ()=> {
+          if(!state.location || !state.theatre){
+            alert('Please select location and theatre first');
+            return;
+          }
+          if(action === 'book'){
+            const movie = MOVIES.find(x=>x.id===id);
+            state.selectedMovie = movie;
+            state.selectedShow = movie.shows[0];
+            state.ticketType = 'standard';
+            state.selectedSeats = [];
+            updateSidebar();
+            openModalForMovie(id);
+          } else {
+            openModalForMovie(id);
+          }
+        });
+      });
+    }
+
+    /***********************
+     * SIDEBAR & SELECTION
+     ***********************/
+    function resetSelection(){
+      state.selectedMovie = null;
+      state.selectedShow = null;
+      state.ticketType = 'standard';
+      state.selectedSeats = [];
+      updateSidebar();
+    }
+
+    function updateSidebar(){
+      selLocationEl.textContent = state.location || '—';
+      selTheatreEl.textContent = state.theatre || '—';
+      selMovieEl.textContent = state.selectedMovie ? state.selectedMovie.title : '—';
+      selShowEl.textContent = state.selectedShow ? formatDateTime(state.selectedShow) : '—';
+      selSeatsEl.textContent = state.selectedSeats.length || 0;
+      const price = (PRICING[state.ticketType] || 0) * (state.selectedSeats.length || 0);
+      selPriceEl.textContent = `₹${price}`;
+      openModalBtn.disabled = !state.selectedMovie || !state.theatre;
+    }
+
+    clearSelectionBtn.addEventListener('click', ()=> {
+      resetSelection();
+    });
+
+    openModalBtn.addEventListener('click', ()=> {
+      if(!state.selectedMovie){ alert('Select a movie first'); return; }
+      if(!state.theatre){ alert('Select theatre first'); return; }
+      openModalForMovie(state.selectedMovie.id);
+    });
+
+    /***********************
+     * MODAL — movie details + seats
+     ***********************/
+    function openModalForMovie(movieId){
+      if(!state.theatre){
+        alert('Please select a theatre first');
+        return;
+      }
+      const movie = MOVIES.find(m => m.id === movieId);
+      if(!movie) return;
+      state.selectedMovie = movie;
+      state.selectedShow = state.selectedShow || movie.shows[0];
+      state.ticketType = state.ticketType || 'standard';
+      state.selectedSeats = state.selectedSeats || [];
+
+      modalTitle.textContent = movie.title;
+      modalPoster.style.backgroundImage = `url('${movie.poster}')`;
+      modalGenre.textContent = `${movie.genre} • ${movie.runtime} • ${state.theatre}`;
+      modalInfo.textContent = movie.synopsis;
+
+      modalCast.innerHTML = '';
+      movie.cast.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'cast-member';
+        div.innerHTML = `<img src="${c.img}" alt="${c.name}"><div style="font-size:12px;margin-top:6px">${c.name}</div>`;
+        modalCast.appendChild(div);
+      });
+
+      modalShowtime.innerHTML = '';
+      movie.shows.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = formatDateTime(s);
+        modalShowtime.appendChild(opt);
+      });
+      modalShowtime.value = state.selectedShow;
+
+      modalTicketType.value = state.ticketType;
+
+      renderSeatGrid();
+      modal.classList.add('show');
+    }
+
+    closeModalBtn.addEventListener('click', ()=> { modal.classList.remove('show'); });
+    cancelBtn.addEventListener('click', ()=> { modal.classList.remove('show'); });
+
+    modalShowtime.addEventListener('change', (e)=>{
+      state.selectedShow = e.target.value;
+      state.selectedSeats = [];
+      renderSeatGrid();
+      updateSidebar();
+    });
+
+    modalTicketType.addEventListener('change', (e)=>{
+      state.ticketType = e.target.value;
+      updateSeatSummary();
+      updateSidebar();
+    });
+
+    /***********************
+     * Seat grid: 8 rows x 14 cols = 112 seats (A1..H14)
+     ***********************/
+    function renderSeatGrid(){
+      seatGrid.innerHTML = '';
+      const rows = 8, cols = 14;
+      updateOccupiedForCurrentShow();
+      for(let r = 0; r < rows; r++){
+        for(let c = 1; c <= cols; c++){
+          const label = String.fromCharCode(65 + r) + c;
+          const div = document.createElement('div');
+          div.className = 'seat';
+          div.dataset.seat = label;
+          div.textContent = label;
+          if(state.occupiedSeats && state.occupiedSeats.includes(label)){
+            div.classList.add('booked');
+          } else {
+            div.addEventListener('click', ()=> {
+              if(div.classList.contains('booked')) return;
+              const idx = state.selectedSeats.indexOf(label);
+              if(idx > -1){
+                state.selectedSeats.splice(idx,1);
+                div.classList.remove('selected');
+              } else {
+                state.selectedSeats.push(label);
+                div.classList.add('selected');
+              }
+              updateSeatSummary();
+              updateSidebar();
+            });
+          }
+          if(state.selectedSeats.includes(label)) div.classList.add('selected');
+          seatGrid.appendChild(div);
+        }
+      }
+      updateSeatSummary();
+    }
+
+    function updateOccupiedForCurrentShow(){
+      const key = getShowKey(state.selectedMovie.id, state.selectedShow || state.selectedMovie.shows[0], state.theatre);
+      const occupied = [];
+      state.bookings.forEach(b => { if(b.key === key) occupied.push(...b.seats); });
+      state.occupiedSeats = occupied;
+    }
+
+    function updateSeatSummary(){
+      const count = state.selectedSeats.length;
+      document.getElementById('seatNote').textContent = `${count} seat(s) selected — ${state.selectedSeats.join(', ') || 'None'}`;
+      updateSidebar();
+    }
+
+    /***********************
+     * Confirm & Pay → opens payment modal
+     ***********************/
+    payBtn.addEventListener('click', ()=> {
+      if(!state.selectedSeats.length){
+        alert('Please select at least one seat to proceed.');
+        return;
+      }
+      state.ticketType = modalTicketType.value;
+      state.selectedShow = modalShowtime.value;
+      const amount = (PRICING[state.ticketType] || 0) * state.selectedSeats.length;
+      payAmountEl.textContent = `₹${amount}`;
+      payMethodEl.value = '';
+      upiForm.style.display = 'none';
+      netForm.style.display = 'none';
+      upiIdEl.value = '';
+      bankSelectEl.value = '';
+      paymentModal.classList.add('show');
+    });
+
+    payMethodEl.addEventListener('change', (e)=>{
+      if(e.target.value === 'upi'){ upiForm.style.display = 'block'; netForm.style.display = 'none'; }
+      else if(e.target.value === 'netbanking'){ upiForm.style.display = 'none'; netForm.style.display = 'block'; }
+      else { upiForm.style.display = 'none'; netForm.style.display = 'none'; }
+    });
+
+    confirmPayBtn.addEventListener('click', ()=> {
+      const method = payMethodEl.value;
+      if(!method){ alert('Choose a payment method (UPI or Net Banking)'); return; }
+      if(method === 'upi' && !upiIdEl.value.trim()){ alert('Enter UPI ID'); return; }
+      if(method === 'netbanking' && !bankSelectEl.value){ alert('Select a bank'); return; }
+
+      const key = getShowKey(state.selectedMovie.id, state.selectedShow, state.theatre);
+      const booking = {
+        id: Date.now(),
+        key,
+        movieId: state.selectedMovie.id,
+        title: state.selectedMovie.title,
+        location: state.location,
+        theatre: state.theatre,
+        time: state.selectedShow,
+        ticketType: state.ticketType,
+        seats: [...state.selectedSeats],
+        price: (PRICING[state.ticketType] || 0) * state.selectedSeats.length,
+        method: method,
+        payer: state.user ? state.user.email : 'guest'
+      };
+      state.bookings.push(booking);
+      saveBookings();
+
+      paymentModal.classList.remove('show');
+      modal.classList.remove('show');
+
+      alert(`Payment successful via ${method.toUpperCase()}!\nBooking ID: ${booking.id}\nTheatre: ${booking.theatre}\nSeats: ${booking.seats.join(', ')}`);
+
+      renderBookingsList();
+      resetSelection();
+    });
+
+    cancelPayBtn.addEventListener('click', ()=> { paymentModal.classList.remove('show'); });
+    closePaymentBtn.addEventListener('click', ()=> { paymentModal.classList.remove('show'); });
+
+    /***********************
+     * BOOKINGS list / export / clear
+     ***********************/
+    function renderBookingsList(){
+      loadBookings();
+      if(!state.bookings.length){ bookingsListEl.innerHTML = `<div class="muted">No bookings yet.</div>`; return; }
+      bookingsListEl.innerHTML = '';
+      state.bookings.slice().reverse().forEach(b=>{
+        const div = document.createElement('div');
+        div.style.padding = '10px';
+        div.style.borderBottom = '1px solid #ffffff';
+        div.innerHTML = `<div style="display:flex;justify-content:space-between">
+          <div><strong>${b.title}</strong><div class="muted" style="font-size:12px">${b.theatre} • ${b.location}</div><div class="muted" style="font-size:12px">${formatDateTime(b.time)} • ${b.ticketType}</div></div>
+          <div style="text-align:right"><div>₹${b.price}</div><div class="muted" style="font-size:12px">ID: ${b.id}</div></div>
+        </div>
+        <div class="muted" style="font-size:13px;margin-top:6px">Seats: ${b.seats.join(', ')} • Paid via ${b.method.toUpperCase()}</div>`;
+        bookingsListEl.appendChild(div);
+      });
+    }
+
+    exportBookingsBtn.addEventListener('click', ()=> {
+      loadBookings();
+      const dataStr = JSON.stringify(state.bookings, null, 2);
+      const blob = new Blob([dataStr], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'justNow_bookings.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+     
+    clearBookingsBtn.addEventListener('click', ()=> {
+      if(confirm('Clear all bookings from this browser?')){ state.bookings = []; saveBookings(); renderBookingsList(); }
+    });
+
+    myBookingsBtn.addEventListener('click', ()=> {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    });
+
+    /***********************
+     * INITIAL load
+     ***********************/
+    loadBookings();
+    renderBookingsList();
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape'){ modal.classList.remove('show'); paymentModal.classList.remove('show'); }
+    });
+  </script>
+</body>
+</html>
